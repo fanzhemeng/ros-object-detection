@@ -37,9 +37,15 @@ typedef const boost::function< void(const sensor_msgs::ImageConstPtr&)> callback
 
 class objectDetector{
 public:
-    cv::Mat matImage;
-    sensor_msgs::ImagePtr messagePtr;
-    void imageCallback(const sensor_msgs::ImageConstPtr& msg);
+    cv::Mat matImage01;
+    cv::Mat matImage02;
+    cv::Mat matImage03;
+    sensor_msgs::ImagePtr messagePtr01;
+    sensor_msgs::ImagePtr messagePtr02;
+    sensor_msgs::ImagePtr messagePtr03;
+    void imageCallback01(const sensor_msgs::ImageConstPtr& msg);
+    void imageCallback02(const sensor_msgs::ImageConstPtr& msg);
+    void imageCallback03(const sensor_msgs::ImageConstPtr& msg);
     objectDetector();
     ~objectDetector();
 };
@@ -47,27 +53,68 @@ public:
 objectDetector::objectDetector() {
 }
 
-objectDetector::~objectDetector() {}
+objectDetector::~objectDetector() {
+}
 
-static void wrapper_imageCallback(void* pt2Object, const sensor_msgs::ImageConstPtr& msg);
+static void wrapper_imageCallback01(void* pt2Object, const sensor_msgs::ImageConstPtr& msg);
+static void wrapper_imageCallback02(void* pt2Object, const sensor_msgs::ImageConstPtr& msg);
+static void wrapper_imageCallback03(void* pt2Object, const sensor_msgs::ImageConstPtr& msg);
 
-void objectDetector::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
+void objectDetector::imageCallback01(const sensor_msgs::ImageConstPtr& msg) {
     try {
-        this->matImage = cv_bridge::toCvShare(msg, "bgr8")->image;
+        this->matImage01 = cv_bridge::toCvShare(msg, "bgr8")->image;
         //---------------object_detect(cvimage)
         //cv::imshow("view", this->matImage);
         //cv::waitKey(30);
 
-        this->messagePtr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", this->matImage).toImageMsg();
+        this->messagePtr01 = cv_bridge::CvImage(std_msgs::Header(), "bgr8", this->matImage01).toImageMsg();
     }
     catch (cv_bridge::Exception& e) {
         ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
     }
 }
 
-static void wrapper_imageCallback(void* pt2Object, const sensor_msgs::ImageConstPtr& msg) {
+void objectDetector::imageCallback02(const sensor_msgs::ImageConstPtr& msg) {
+    try {
+        this->matImage02 = cv_bridge::toCvShare(msg, "bgr8")->image;
+        //---------------object_detect(cvimage)
+        //cv::imshow("view", this->matImage);
+        //cv::waitKey(30);
+
+        this->messagePtr02 = cv_bridge::CvImage(std_msgs::Header(), "bgr8", this->matImage02).toImageMsg();
+    }
+    catch (cv_bridge::Exception& e) {
+        ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
+    }
+}
+
+void objectDetector::imageCallback03(const sensor_msgs::ImageConstPtr& msg) {
+    try {
+        this->matImage03 = cv_bridge::toCvShare(msg, "bgr8")->image;
+        //---------------object_detect(cvimage)
+        //cv::imshow("view", this->matImage);
+        //cv::waitKey(30);
+
+        this->messagePtr03 = cv_bridge::CvImage(std_msgs::Header(), "bgr8", this->matImage03).toImageMsg();
+    }
+    catch (cv_bridge::Exception& e) {
+        ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
+    }
+}
+
+static void wrapper_imageCallback01(void* pt2Object, const sensor_msgs::ImageConstPtr& msg) {
     objectDetector* det = (objectDetector*) pt2Object;
-    det->imageCallback(msg);
+    det->imageCallback01(msg);
+}
+
+static void wrapper_imageCallback02(void* pt2Object, const sensor_msgs::ImageConstPtr& msg) {
+    objectDetector* det = (objectDetector*) pt2Object;
+    det->imageCallback02(msg);
+}
+
+static void wrapper_imageCallback03(void* pt2Object, const sensor_msgs::ImageConstPtr& msg) {
+    objectDetector* det = (objectDetector*) pt2Object;
+    det->imageCallback03(msg);
 }
 
 
@@ -78,19 +125,25 @@ int main(int argc, char** argv)
     image_transport::ImageTransport it(nh);
 
     objectDetector detector;
-    callback boundImageCallback = boost::bind(&objectDetector::imageCallback, &detector, _1);
+    callback boundImageCallback01 = boost::bind(&objectDetector::imageCallback01, &detector, _1);
+    callback boundImageCallback02 = boost::bind(&objectDetector::imageCallback02, &detector, _1);
+    callback boundImageCallback03 = boost::bind(&objectDetector::imageCallback03, &detector, _1);
 
-    image_transport::Subscriber sub01 = it.subscribe("/Cam/Image_raw01",1,boundImageCallback);
-    image_transport::Subscriber sub02 = it.subscribe("/Cam/Image_raw02",1,boundImageCallback);
-    image_transport::Subscriber sub03 = it.subscribe("/Cam/Image_raw03",1,boundImageCallback);
+    image_transport::Subscriber sub01 = it.subscribe("/Cam/Image_raw01",1,boundImageCallback01);
+    image_transport::Subscriber sub02 = it.subscribe("/Cam/Image_raw02",1,boundImageCallback02);
+    image_transport::Subscriber sub03 = it.subscribe("/Cam/Image_raw03",1,boundImageCallback03);
 
-    image_transport::Publisher pub = it.advertise("images", 1);
+    image_transport::Publisher pub01 = it.advertise("images01", 1);
+    image_transport::Publisher pub02 = it.advertise("images02", 1);
+    image_transport::Publisher pub03 = it.advertise("images03", 1);
 
 
 
     while (nh.ok()) {
 
-        pub.publish(detector.messagePtr);
+        pub01.publish(detector.messagePtr01);
+        pub02.publish(detector.messagePtr02);
+        pub03.publish(detector.messagePtr03);
         ros::spinOnce();
     }
 
