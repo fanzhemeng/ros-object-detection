@@ -16,12 +16,12 @@
 #include "logging.h"
 #include "common.hpp"
 
-/*
+
 #define USE_FP16  // comment out this if want to use FP32
 #define DEVICE 0  // GPU id
 #define NMS_THRESH 0.4
 #define CONF_THRESH 0.5
-#define BATCH_SIZE 1
+#define BATCH_SIZE 3
 
 // stuff we know about the network and the input/output blobs
 static const int INPUT_H = Yolo::INPUT_H;
@@ -31,12 +31,82 @@ static const int OUTPUT_SIZE = Yolo::MAX_OUTPUT_BBOX_COUNT * sizeof(Yolo::Detect
 const char* INPUT_BLOB_NAME = "data";
 const char* OUTPUT_BLOB_NAME = "prob";
 static Logger gLogger;
-*/
+
 
 typedef const boost::function< void(const sensor_msgs::ImageConstPtr&)> callback;
 
+
+class yolov5sengine{
+public:
+    std::string engine_name = "yolov5s.engine";
+
+    static float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
+    static float prob[BATCH_SIZE * OUTPUT_SIZE];
+    IRuntime* runtime;
+    ICudaEngine* engine;
+    IExecutionContext* context;
+    void* buffers[2];
+    int inputIndex;
+    int outputIndex;
+    cudaStream_t stream;
+    yolov5sengine();
+    ~yolov5sengine();
+};
+
+yolov5sengine::yolov5sengine() {
+
+    cudaSetDevice(DEVICE);
+    char *trtModelStream{ nullptr };
+    size_t size{ 0 };
+    std::ifstream file(engine_name, std::ios::binary);
+    if (file.good()) {
+        file.seekg(0, file.end);
+        size = file.tellg();
+        file.seekg(0, file.beg);
+        trtModelStream = new char[size];
+        assert(trtModelStream);
+        file.read(trtModelStream, size);
+        file.close();
+    }
+
+    // prepare input data ---------------------------
+    runtime = createInferRuntime(gLogger);
+    assert(runtime != nullptr);
+    engine = runtime->deserializeCudaEngine(trtModelStream, size);
+    assert(engine != nullptr);
+    context = engine->createExecutionContext();
+    assert(context != nullptr);
+    delete[] trtModelStream;
+    assert(engine->getNbBindings() == 2);
+    void* buffers[2];
+    // In order to bind the buffers, we need to know the names of the input and output tensors.
+    // Note that indices are guaranteed to be less than IEngine::getNbBindings()
+    inputIndex = engine->getBindingIndex(INPUT_BLOB_NAME);
+    outputIndex = engine->getBindingIndex(OUTPUT_BLOB_NAME);
+    assert(inputIndex == 0);
+    assert(outputIndex == 1);
+    // Create GPU buffers on device
+    CHECK(cudaMalloc(&buffers[inputIndex], BATCH_SIZE * 3 * INPUT_H * INPUT_W * sizeof(float)));
+    CHECK(cudaMalloc(&buffers[outputIndex], BATCH_SIZE * OUTPUT_SIZE * sizeof(float)));
+    // Create stream
+    CHECK(cudaStreamCreate(&stream));
+}
+
+
+yolov5sengine::~yolov5sengine() {
+    // Release stream and buffers
+    cudaStreamDestroy(stream);
+    CHECK(cudaFree(buffers[inputIndex]));
+    CHECK(cudaFree(buffers[outputIndex]));
+    // Destroy the engine
+    context->destroy();
+    engine->destroy();
+    runtime->destroy();
+}
+
 class objectDetector{
 public:
+    static yolov5sengine yoloengine;
     cv::Mat matImage01;
     cv::Mat matImage02;
     cv::Mat matImage03;
@@ -49,6 +119,8 @@ public:
     objectDetector();
     ~objectDetector();
 };
+
+yolov5sengine objectDetector::yoloengine;
 
 objectDetector::objectDetector() {
 }
