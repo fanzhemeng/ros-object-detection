@@ -33,7 +33,8 @@ static Logger gLogger;
 
 class yolov5sengine{
 public:
-    std::string engine_name = "yolov5s.engine";
+    std::string filepath = "/home/huituo/catkin_ws/src/object_detection_with_msgs/src/";
+    std::string engine_name = filepath+"yolov5s.engine";
     std::vector<std::string> classes;
     float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
     float prob[BATCH_SIZE * OUTPUT_SIZE];
@@ -63,7 +64,7 @@ ICudaEngine* yolov5sengine::createEngine_s(unsigned int maxBatchSize, IBuilder* 
     ITensor* data = network->addInput(INPUT_BLOB_NAME, dt, Dims3{ 3, INPUT_H, INPUT_W });
     assert(data);
 
-    std::map<std::string, Weights> weightMap = loadWeights("yolov5s.wts");
+    std::map<std::string, Weights> weightMap = loadWeights(filepath+"yolov5s.wts");
     Weights emptywts{ DataType::kFLOAT, nullptr, 0 };
 
     // yolov5 backbone
@@ -165,7 +166,10 @@ void yolov5sengine::APIToModel(unsigned int maxBatchSize, IHostMemory** modelStr
 yolov5sengine::yolov5sengine() {
 
     // get classes names from classes.txt
-    std::ifstream infile("classes.txt");
+    std::ifstream infile(filepath+"classes.txt");
+    if (! infile.good()) {
+        std::cerr << "classes.txt file not found in src directory" << std::endl;
+    }
     std::string line;
     while (std::getline(infile, line)) { classes.push_back(line); }
 
@@ -278,7 +282,10 @@ std::vector<std::vector<Yolo::Detection>> yolov5sengine::detect(std::vector<cv::
         for (size_t j = 0; j < res.size(); j++) {
             cv::Rect r = get_rect(imgs[b], res[j].bbox);
             cv::rectangle(imgs[b], r, cv::Scalar(0x27, 0xC1, 0x36), 2);
-            std::string classname = classes[(int)res[j].class_id];
+            std::string classname = "";
+            if ((int)res[j].class_id < classes.size()) {
+                classname = classes[(int)res[j].class_id];
+            }
             cv::putText(imgs[b], classname, cv::Point(r.x, r.y - 1), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0x27, 0xC1, 0x36), 2);
         }
     }
