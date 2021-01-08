@@ -1,18 +1,5 @@
-#include <ros/ros.h>
-#include <image_transport/image_transport.h>
-#include <opencv2/highgui/highgui.hpp>
-#include <cv_bridge/cv_bridge.h>
-//#include <opencv2/opencv.hpp>
-
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
-#include <std_msgs/Int32.h>
-#include <std_msgs/String.h>
-#include <sensor_msgs/Image.h>
-#include <waytous_perception_msgs/Object.h>
-#include <waytous_perception_msgs/ObjectArray.h>
-#include <waytous_perception_msgs/Rect.h>
-
+#ifndef YOLOV5S_ENGINE_H_
+#define YOLOV5S_ENGINE_H_
 
 #include <iostream>
 #include <fstream>
@@ -20,7 +7,6 @@
 #include "cuda_runtime_api.h"
 #include "logging.h"
 #include "common.hpp"
-
 
 #define USE_FP16  // comment out this if want to use FP32
 #define DEVICE 0  // GPU id
@@ -34,6 +20,7 @@
 #define STR1(x) #x
 #define STR2(x) STR1(x)
 
+
 // stuff we know about the network and the input/output blobs
 static const int INPUT_H = Yolo::INPUT_H;
 static const int INPUT_W = Yolo::INPUT_W;
@@ -44,26 +31,10 @@ const char* OUTPUT_BLOB_NAME = "prob";
 static Logger gLogger;
 
 
-typedef const boost::function< void(const sensor_msgs::ImageConstPtr&)> callback;
-const char* sub_topic01 = "/Cam/Image_raw01";
-const char* sub_topic02 = "/Cam/Image_raw02";
-const char* sub_topic03 = "/Cam/Image_raw03";
-const char* pub_topic01 = "/detection01";
-const char* pub_topic02 = "/detection02";
-const char* pub_topic03 = "/detection03";
-
-ros::Subscriber sub01;
-ros::Subscriber sub02;
-ros::Subscriber sub03;
-ros::Publisher pub01;
-ros::Publisher pub02;
-ros::Publisher pub03;
-
 class yolov5sengine{
 public:
     std::string engine_name = "yolov5s.engine";
     std::vector<std::string> classes;
-
     float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
     float prob[BATCH_SIZE * OUTPUT_SIZE];
     IRuntime* runtime;
@@ -73,12 +44,15 @@ public:
     int inputIndex;
     int outputIndex;
     cudaStream_t stream;
+
     yolov5sengine();
     ~yolov5sengine();
+    std::vector<std::vector<Yolo::Detection>> detect(std::vector<cv::Mat>& imgs);
+private:
+    void APIToModel(unsigned int maxBatchSize, IHostMemory** modelStream);
     ICudaEngine* createEngine_s(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt);
     void doInference(IExecutionContext& context, cudaStream_t& stream, void **buffers, float* input, float* output, int batchSize);
-    std::vector<std::vector<Yolo::Detection>> detect(std::vector<cv::Mat>& imgs);
-    void APIToModel(unsigned int maxBatchSize, IHostMemory** modelStream);
+
 };
 
 // Creat the engine using only the API and not any parser.
@@ -303,148 +277,12 @@ std::vector<std::vector<Yolo::Detection>> yolov5sengine::detect(std::vector<cv::
         std::cout << std::to_string(b) << " found: " << res.size() << std::endl;
         for (size_t j = 0; j < res.size(); j++) {
             cv::Rect r = get_rect(imgs[b], res[j].bbox);
-            //cv::rectangle(imgs[b], r, cv::Scalar(0x27, 0xC1, 0x36), 2);
+            cv::rectangle(imgs[b], r, cv::Scalar(0x27, 0xC1, 0x36), 2);
             std::string classname = classes[(int)res[j].class_id];
-            //cv::putText(imgs[b], classname, cv::Point(r.x, r.y - 1), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0x27, 0xC1, 0x36), 2);
+            cv::putText(imgs[b], classname, cv::Point(r.x, r.y - 1), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0x27, 0xC1, 0x36), 2);
         }
     }
     return batch_res;
 }
+#endif
 
-
-class objectDetector{
-public:
-    static yolov5sengine yoloengine;
-    sensor_msgs::ImageConstPtr msgIn01;
-    sensor_msgs::ImageConstPtr msgIn02;
-    sensor_msgs::ImageConstPtr msgIn03;
-    cv::Mat cvImage01;
-    cv::Mat cvImage02;
-    cv::Mat cvImage03;
-    bool check01;
-    bool check02;
-    bool check03;
-    waytous_perception_msgs::ObjectArray msgOut01;
-    waytous_perception_msgs::ObjectArray msgOut02;
-    waytous_perception_msgs::ObjectArray msgOut03;
-    void imageCallback01(const sensor_msgs::ImageConstPtr& msg);
-    void imageCallback02(const sensor_msgs::ImageConstPtr& msg);
-    void imageCallback03(const sensor_msgs::ImageConstPtr& msg);
-    objectDetector();
-};
-
-objectDetector::objectDetector() {
-    check01 = check02 = check03 = false;
-}
-
-yolov5sengine objectDetector::yoloengine;
-
-void objectDetector::imageCallback01(const sensor_msgs::ImageConstPtr& msg) {
-    try {
-
-    	this->msgIn01 = msg;
-        this->cvImage01 = cv_bridge::toCvShare(msg, "bgr8")->image;
-        this->check01 = true;
-
-    }
-    catch (cv_bridge::Exception& e) {
-        ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
-    }
-}
-
-void objectDetector::imageCallback02(const sensor_msgs::ImageConstPtr& msg) {
-    try {
-
-    	this->msgIn02 = msg;
-        this->cvImage02 = cv_bridge::toCvShare(msg, "bgr8")->image;
-        this->check02 = true;
-
-    }
-    catch (cv_bridge::Exception& e) {
-        ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
-    }
-}
-
-void objectDetector::imageCallback03(const sensor_msgs::ImageConstPtr& msg) {
-    try {
-
-    	this->msgIn03 = msg;
-        this->cvImage03 = cv_bridge::toCvShare(msg, "bgr8")->image;
-        this->check03 = true;
-
-    }
-    catch (cv_bridge::Exception& e) {
-        ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
-    }
-    
-    
-    if (check01 && check02 && check03) {
-        // --------detect using yoloengine, with batch_size=3
-        std::vector<cv::Mat> cvimgs;
-        cvimgs.push_back(this->cvImage01);
-        cvimgs.push_back(this->cvImage02);
-        cvimgs.push_back(this->cvImage03);
-
-        std::vector<std::vector<Yolo::Detection>> batch_res = yoloengine.detect(cvimgs);
-
-        //cv_bridge::CvImage(std_msgs::Header(), "bgr8", this->cvImage01).toImageMsg((this->msgOut01).roi_image);
-        //cv_bridge::CvImage(std_msgs::Header(), "bgr8", this->cvImage02).toImageMsg((this->msgOut02).roi_image);
-        //cv_bridge::CvImage(std_msgs::Header(), "bgr8", this->cvImage03).toImageMsg((this->msgOut03).roi_image);
-
-        this->msgOut01.header = (this->msgIn01)->header;
-        this->msgOut02.header = (this->msgIn02)->header;
-        this->msgOut03.header = (this->msgIn03)->header;
-
-        for (int b=0; b<batch_res.size(); b++) {
-            auto& res = batch_res[b];
-            for (size_t j = 0; j < res.size(); j++) {
-                waytous_perception_msgs::Object obj;
-                waytous_perception_msgs::Rect r;
-                cv::Rect cv_rect = get_rect(cvimgs[b], res[j].bbox);
-                r.x = cv_rect.x;
-                r.y = cv_rect.y;
-                r.w = cv_rect.width;
-                r.h = cv_rect.height;
-                obj.rect = r;
-                obj.label_type = (int)res[j].class_id;
-                obj.score = res[j].conf;
-
-                if (b==0) {
-                	this->msgOut01.foreground_objects.push_back(obj);
-                }
-                else if (b==1) {
-                	this->msgOut02.foreground_objects.push_back(obj);
-                }
-                else if (b==2) {
-                	this->msgOut03.foreground_objects.push_back(obj);
-                }
-            }
-        }
-        pub01.publish(this->msgOut01);
-        pub02.publish(this->msgOut02);
-        pub03.publish(this->msgOut03);
-        
-        check01 = check02 = check03 = false;
-    }
-}
-
-
-
-int main(int argc, char** argv)
-{
-    ros::init(argc, argv, "object_detection_msgs");
-    ros::NodeHandle nh;
-
-    pub01 = nh.advertise<waytous_perception_msgs::ObjectArray>(pub_topic01, 1);
-    pub02 = nh.advertise<waytous_perception_msgs::ObjectArray>(pub_topic02, 1);
-    pub03 = nh.advertise<waytous_perception_msgs::ObjectArray>(pub_topic03, 1);
-
-    objectDetector detector;
-    sub01 = nh.subscribe(sub_topic01, 1, &objectDetector::imageCallback01, &detector);
-    sub02 = nh.subscribe(sub_topic02, 1, &objectDetector::imageCallback02, &detector);
-    sub03 = nh.subscribe(sub_topic03, 1, &objectDetector::imageCallback03, &detector);
-
-    ros::spin();
-
-    return 0;
-}

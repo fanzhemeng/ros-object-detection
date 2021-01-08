@@ -161,12 +161,12 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/object_detection_with_msgs_node.cpp)
-add_executable(objectDetection src/objectDetection.cpp)
-target_link_libraries(objectDetection ${catkin_LIBRARIES})
-target_link_libraries(objectDetection nvinfer)
-target_link_libraries(objectDetection cudart)
-target_link_libraries(objectDetection myplugins)
-target_link_libraries(objectDetection ${OpenCV_LIBS})
+add_executable(objectDetection_node src/objectDetection_node.cpp)
+target_link_libraries(objectDetection_node ${catkin_LIBRARIES})
+target_link_libraries(objectDetection_node nvinfer)
+target_link_libraries(objectDetection_node cudart)
+target_link_libraries(objectDetection_node myplugins)
+target_link_libraries(objectDetection_node ${OpenCV_LIBS})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
