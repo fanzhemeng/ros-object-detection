@@ -1,3 +1,5 @@
 .DS_Store
 build/*
 waytous_perception_msgs/*
+src/*.engine
+src/*.wts
