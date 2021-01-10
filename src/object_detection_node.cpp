@@ -1,11 +1,11 @@
 #include <ros/ros.h>
-#include "objectDetector.hpp"
+#include "object_detector.hpp"
 
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "object_detection_node");
     ros::NodeHandle nh;
-    objectDetector detector(nh);
+    ObjectDetector detector(nh);
 
     ros::spin();
 

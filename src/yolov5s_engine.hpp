@@ -12,7 +12,7 @@
 #define DEVICE 0  // GPU id
 #define NMS_THRESH 0.4
 #define CONF_THRESH 0.5
-#define BATCH_SIZE 3
+#define BATCH_SIZE 4
 
 #define NET s  // s m l x
 #define NETSTRUCT(str) createEngine_##str
@@ -31,9 +31,9 @@ const char* OUTPUT_BLOB_NAME = "prob";
 static Logger gLogger;
 
 
-class yolov5sengine{
+class Yolov5sEngine{
 public:
-    std::string filepath = "/home/huituo/catkin_ws/src/object_detection_with_msgs/src/";
+    std::string filepath = "/home/huituo/catkin_ws/src/object_detection_with_msgs/";
     std::string engine_name = filepath+"yolov5s.engine";
     std::vector<std::string> classes;
     float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
@@ -46,8 +46,8 @@ public:
     int outputIndex;
     cudaStream_t stream;
 
-    yolov5sengine();
-    ~yolov5sengine();
+    Yolov5sEngine();
+    ~Yolov5sEngine();
     std::vector<std::vector<Yolo::Detection>> detect(std::vector<cv::Mat>& imgs);
 private:
     void APIToModel(unsigned int maxBatchSize, IHostMemory** modelStream);
@@ -57,7 +57,7 @@ private:
 };
 
 // Creat the engine using only the API and not any parser.
-ICudaEngine* yolov5sengine::createEngine_s(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt) {
+ICudaEngine* Yolov5sEngine::createEngine_s(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt) {
     INetworkDefinition* network = builder->createNetworkV2(0U);
 
     // Create input tensor of shape {3, INPUT_H, INPUT_W} with name INPUT_BLOB_NAME
@@ -145,7 +145,7 @@ ICudaEngine* yolov5sengine::createEngine_s(unsigned int maxBatchSize, IBuilder* 
     return engine;
 }
 
-void yolov5sengine::APIToModel(unsigned int maxBatchSize, IHostMemory** modelStream) {
+void Yolov5sEngine::APIToModel(unsigned int maxBatchSize, IHostMemory** modelStream) {
     // Create builder
     IBuilder* builder = createInferBuilder(gLogger);
     IBuilderConfig* config = builder->createBuilderConfig();
@@ -163,7 +163,7 @@ void yolov5sengine::APIToModel(unsigned int maxBatchSize, IHostMemory** modelStr
     builder->destroy();
 }
 
-yolov5sengine::yolov5sengine() {
+Yolov5sEngine::Yolov5sEngine() {
 
     // get classes names from classes.txt
     std::ifstream infile(filepath+"classes.txt");
@@ -229,7 +229,7 @@ yolov5sengine::yolov5sengine() {
 }
 
 
-yolov5sengine::~yolov5sengine() {
+Yolov5sEngine::~Yolov5sEngine() {
     // Release stream and buffers
     cudaStreamDestroy(stream);
     CHECK(cudaFree(buffers[inputIndex]));
@@ -240,7 +240,7 @@ yolov5sengine::~yolov5sengine() {
     runtime->destroy();
 }
 
-void yolov5sengine::doInference(IExecutionContext& context, cudaStream_t& stream, void **buffers, float* input, float* output, int batchSize) {
+void Yolov5sEngine::doInference(IExecutionContext& context, cudaStream_t& stream, void **buffers, float* input, float* output, int batchSize) {
     // DMA input batch data to device, infer on the batch asynchronously, and DMA output back to host
     CHECK(cudaMemcpyAsync(buffers[0], input, batchSize * 3 * INPUT_H * INPUT_W * sizeof(float), cudaMemcpyHostToDevice, stream));
     context.enqueue(batchSize, buffers, stream, nullptr);
@@ -248,7 +248,7 @@ void yolov5sengine::doInference(IExecutionContext& context, cudaStream_t& stream
     cudaStreamSynchronize(stream);
 }
 
-std::vector<std::vector<Yolo::Detection>> yolov5sengine::detect(std::vector<cv::Mat>& imgs) {
+std::vector<std::vector<Yolo::Detection>> Yolov5sEngine::detect(std::vector<cv::Mat>& imgs) {
     int fcount = BATCH_SIZE;
     for (int b=0; b<fcount; b++) {
         cv::Mat pr_img = preprocess_img(imgs[b]);
