@@ -1,26 +1,6 @@
-// #include <fstream>
-// #include <map>
-// #include <sstream>
-// #include <vector>
-// #include <opencv2/opencv.hpp>
-// #include <dirent.h>
-// #include "NvInfer.h"
-// #include "yololayer.h"
 #include "common.hpp"
 
-#define CHECK(status) \
-    do\
-    {\
-        auto ret = (status);\
-        if (ret != 0)\
-        {\
-            std::cerr << "Cuda failure: " << ret << std::endl;\
-            abort();\
-        }\
-    } while (0)
-
 using namespace nvinfer1;
-
 
 cv::Mat preprocess_img(cv::Mat& img) {
     int w, h, x, y;
@@ -89,7 +69,7 @@ bool cmp(const Yolo::Detection& a, const Yolo::Detection& b) {
     return a.conf > b.conf;
 }
 
-void nms(std::vector<Yolo::Detection>& res, float *output, float conf_thresh, float nms_thresh = 0.5) {
+void nms(std::vector<Yolo::Detection>& res, float *output, float conf_thresh, float nms_thresh) {
     int det_size = sizeof(Yolo::Detection) / sizeof(float);
     std::map<float, std::vector<Yolo::Detection>> m;
     for (int i = 0; i < output[0] && i < Yolo::MAX_OUTPUT_BBOX_COUNT; i++) {

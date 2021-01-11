@@ -29,6 +29,8 @@ cv::Rect get_rect(cv::Mat& img, float bbox[4]);
 
 float iou(float lbox[4], float rbox[4]);
 
+bool cmp(const Yolo::Detection& a, const Yolo::Detection& b) ;
+
 void nms(std::vector<Yolo::Detection>& res, float *output, float conf_thresh, float nms_thresh = 0.5);
 
 // TensorRT weight files have a simple space delimited format:
@@ -53,3 +55,4 @@ std::vector<float> getAnchors(std::map<std::string, Weights>& weightMap);
 
 IPluginV2Layer* addYoLoLayer(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, IConvolutionLayer* det0, IConvolutionLayer* det1, IConvolutionLayer* det2);
 #endif
+
