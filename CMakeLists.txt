@@ -161,7 +161,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/object_detection_with_msgs_node.cpp)
-add_executable(object_detection_node src/object_detection_node.cpp)
+add_executable(object_detection_node src/*.cpp)
 target_link_libraries(object_detection_node ${catkin_LIBRARIES})
 target_link_libraries(object_detection_node nvinfer)
 target_link_libraries(object_detection_node cudart)
