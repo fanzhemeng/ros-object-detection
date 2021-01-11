@@ -137,6 +137,12 @@ while(mIsWorking)
         this->mPub07.publish(this->mMsgOut07);
         this->mPub08.publish(this->mMsgOut08);
 
+        this->mCvImagesIn.clear();
+        this->mCvImagesOut.clear();
+        this->mMsgOut01.foreground_objects.clear();
+        this->mMsgOut02.foreground_objects.clear();
+        this->mMsgOut03.foreground_objects.clear();
+        this->mMsgOut04.foreground_objects.clear();
         auto end_process = std::chrono::system_clock::now();
         std::cout << "process total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_process - start_process).count() << "ms" << std::endl << std::endl;
 
