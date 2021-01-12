@@ -31,7 +31,7 @@ static Logger gLogger;
 
 class Yolov5sEngine{
 public:
-    std::string filepath = "/home/huituo/catkin_ws/src/object_detection_with_msgs/";
+    std::string filepath = "src/object_detection/";
     std::string engine_name = filepath+"yolov5s.engine";
     std::vector<std::string> classes;
     float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
@@ -52,5 +52,6 @@ private:
     void APIToModel(unsigned int maxBatchSize, IHostMemory** modelStream);
     ICudaEngine* createEngine_s(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt);
     void doInference(IExecutionContext& context, cudaStream_t& stream, void **buffers, float* input, float* output, int batchSize);
+
 };
 #endif

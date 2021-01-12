@@ -1,6 +1,9 @@
 #include "yolov5s_engine.hpp"
+
+
 const char* INPUT_BLOB_NAME = "data";
 const char* OUTPUT_BLOB_NAME = "prob";
+
 // Creat the engine using only the API and not any parser.
 ICudaEngine* Yolov5sEngine::createEngine_s(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt) {
     INetworkDefinition* network = builder->createNetworkV2(0U);
@@ -112,7 +115,7 @@ void Yolov5sEngine::setup() {
     // get classes names from classes.txt
     std::ifstream infile(filepath+"classes.txt");
     if (! infile.good()) {
-        std::cerr << "classes.txt file not found in src directory" << std::endl;
+        std::cerr << filepath << "classes.txt file not found" << std::endl;
     }
     std::string line;
     while (std::getline(infile, line)) { classes.push_back(line); }
@@ -130,7 +133,7 @@ void Yolov5sEngine::setup() {
         assert(modelStream != nullptr);
         std::ofstream p(engine_name, std::ios::binary);
         if (!p) {
-            std::cerr << "Unable to build engine from yolov5s.wts ... Do you have yolov5s.wts in current dir?\nABORT" << std::endl;
+            std::cerr << "\nUnable to load yolov5s.wts ... ABORT" << std::endl;
         }
         p.write(reinterpret_cast<const char*>(modelStream->data()), modelStream->size());
         modelStream->destroy();
@@ -149,7 +152,7 @@ void Yolov5sEngine::setup() {
     else {
         std::cerr << engine_name << " still not found.\nABORT" << std::endl;
     }
-    
+
     // prepare input data
     runtime = createInferRuntime(gLogger);
     assert(runtime != nullptr);
@@ -210,10 +213,7 @@ std::vector<std::vector<Yolo::Detection>> Yolov5sEngine::detect(std::vector<cv::
     }
 
     // Run inference
-    //auto start = std::chrono::system_clock::now();
     doInference(*context, stream, buffers, data, prob, BATCH_SIZE);
-    //auto end = std::chrono::system_clock::now();
-    //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
     std::vector<std::vector<Yolo::Detection>> batch_res(fcount);
     for (int b = 0; b < fcount; b++) {
         auto& res = batch_res[b];
@@ -222,7 +222,6 @@ std::vector<std::vector<Yolo::Detection>> Yolov5sEngine::detect(std::vector<cv::
 
     for (int b = 0; b < fcount; b++) {
         auto& res = batch_res[b];
-        //std::cout << std::to_string(b) << " found: " << res.size() << std::endl;
         for (size_t j = 0; j < res.size(); j++) {
             cv::Rect r = get_rect(imgs[b], res[j].bbox);
             cv::rectangle(imgs[b], r, cv::Scalar(0x27, 0xC1, 0x36), 2);
@@ -235,5 +234,4 @@ std::vector<std::vector<Yolo::Detection>> Yolov5sEngine::detect(std::vector<cv::
     }
     return batch_res;
 }
-
 

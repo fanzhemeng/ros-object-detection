@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(object_detection_with_msgs)
+project(object_detection)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -130,7 +130,7 @@ target_link_libraries(myplugins nvinfer cudart)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES object_detection_with_msgs
+#  LIBRARIES object_detection
 #  CATKIN_DEPENDS cv_bridge image_transport roscpp std_msgs
 #  DEPENDS system_lib
 )
@@ -149,7 +149,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/object_detection_with_msgs.cpp
+#   src/${PROJECT_NAME}/object_detection.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -160,8 +160,8 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/object_detection_with_msgs_node.cpp)
-add_executable(object_detection_node src/*.cpp)
+# add_executable(${PROJECT_NAME}_node src/object_detection_node.cpp)
+add_executable(object_detection_node src/object_detection_node.cpp src/object_detector.cpp src/yolov5s_engine.cpp src/common.cpp)
 target_link_libraries(object_detection_node ${catkin_LIBRARIES})
 target_link_libraries(object_detection_node nvinfer)
 target_link_libraries(object_detection_node cudart)
@@ -230,7 +230,7 @@ target_link_libraries(object_detection_node ${OpenCV_LIBS})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_object_detection_with_msgs.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_object_detection.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

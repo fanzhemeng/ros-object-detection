@@ -1,43 +1,38 @@
-//#include <vector>
-//#include <opencv2/opencv.hpp>
-//#include <ros/ros.h>
-//#include <cv_bridge/cv_bridge.h>
-//#include <sensor_msgs/Image.h>
-//#include <waytous_perception_msgs/Object.h>
-//#include <waytous_perception_msgs/ObjectArray.h>
-//#include <waytous_perception_msgs/Rect.h>
-//#include "yolov5s_engine.hpp"
 #include "object_detector.hpp"
 
 
 ObjectDetector::ObjectDetector(ros::NodeHandle& nh) {
 
-    mPub01 = nh.advertise<waytous_perception_msgs::ObjectArray>(mPubTopic01, 1);
-    mPub02 = nh.advertise<waytous_perception_msgs::ObjectArray>(mPubTopic02, 1);
-    mPub03 = nh.advertise<waytous_perception_msgs::ObjectArray>(mPubTopic03, 1);
-    mPub04 = nh.advertise<waytous_perception_msgs::ObjectArray>(mPubTopic04, 1);
-    mPub05 = nh.advertise<sensor_msgs::Image>(mPubTopic05, 1);
-    mPub06 = nh.advertise<sensor_msgs::Image>(mPubTopic06, 1);
-    mPub07 = nh.advertise<sensor_msgs::Image>(mPubTopic07, 1);
-    mPub08 = nh.advertise<sensor_msgs::Image>(mPubTopic08, 1);
-
     mSub01 = nh.subscribe(this->mSubTopic01, 1, &ObjectDetector::imageCallback01, this);
+    std::cout << "subscribed to [" << this->mSubTopic01 <<"]" << std::endl;
     mSub02 = nh.subscribe(this->mSubTopic02, 1, &ObjectDetector::imageCallback02, this);
+    std::cout << "subscribed to [" << this->mSubTopic02 <<"]" << std::endl;
     mSub03 = nh.subscribe(this->mSubTopic03, 1, &ObjectDetector::imageCallback03, this);
+    std::cout << "subscribed to [" << this->mSubTopic03 <<"]" << std::endl;
     mSub04 = nh.subscribe(this->mSubTopic04, 1, &ObjectDetector::imageCallback04, this);
+    std::cout << "subscribed to [" << this->mSubTopic04 <<"]" << std::endl;
+
+    mPub01 = nh.advertise<waytous_perception_msgs::ObjectArray>(this->mPubTopic01, 2);
+    mPub02 = nh.advertise<waytous_perception_msgs::ObjectArray>(this->mPubTopic02, 2);
+    mPub03 = nh.advertise<waytous_perception_msgs::ObjectArray>(this->mPubTopic03, 2);
+    mPub04 = nh.advertise<waytous_perception_msgs::ObjectArray>(this->mPubTopic04, 2);
+    mPub05 = nh.advertise<sensor_msgs::Image>(this->mPubTopic05, 2);
+    mPub06 = nh.advertise<sensor_msgs::Image>(this->mPubTopic06, 2);
+    mPub07 = nh.advertise<sensor_msgs::Image>(this->mPubTopic07, 2);
+    mPub08 = nh.advertise<sensor_msgs::Image>(this->mPubTopic08, 2);
+    std::cout << "publish on [/detection_data_0x] and [/detection_image_0x]" << std::endl;
 
     mYoloEngine.setup();
     
     mIsWorking = true;
     mWorkThread = new std::thread([this]{
-
-// proc data
-while(mIsWorking)
-{
+    
+        // proc data
+        while(mIsWorking)
+        {
     if ((!this->mMsgsIn01.empty()) && (!this->mMsgsIn02.empty()) && (!this->mMsgsIn03.empty()) && (!this->mMsgsIn04.empty())) {
-        // --------detect using mYoloEngine, with batch_size=3
-        auto start_process = std::chrono::system_clock::now();
 
+        // detect using ObjectDetector::mYoloEngine, with batch_size=4
         sensor_msgs::ImageConstPtr msgIn01, msgIn02, msgIn03, msgIn04;
         {
             std::unique_lock<std::mutex> lck(this->mMtx01);
@@ -79,10 +74,7 @@ while(mIsWorking)
             this->mCvImagesOut.push_back(this->mCvImagesIn[i]);
         }
 
-        auto start_inf = std::chrono::system_clock::now();
         std::vector<std::vector<Yolo::Detection>> batch_res = this->mYoloEngine.detect(this->mCvImagesOut);
-        auto end_inf = std::chrono::system_clock::now();
-        std::cout << "engine detect time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_inf - start_inf).count() << "ms" << std::endl;
 
         this->mMsgOut01.header = msgIn01->header;
         this->mMsgOut02.header = msgIn02->header;
@@ -143,11 +135,9 @@ while(mIsWorking)
         this->mMsgOut02.foreground_objects.clear();
         this->mMsgOut03.foreground_objects.clear();
         this->mMsgOut04.foreground_objects.clear();
-        auto end_process = std::chrono::system_clock::now();
-        std::cout << "process total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_process - start_process).count() << "ms" << std::endl << std::endl;
 
     }
-}
+        }
     });
 }
 
@@ -187,3 +177,4 @@ void ObjectDetector::imageCallback04(const sensor_msgs::ImageConstPtr& msg) {
     std::unique_lock<std::mutex> lck(this->mMtx04);
     this->mMsgsIn04.push(msg);
 }
+
